@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!--
+  Alfred ships a single custom pastel theme (`alfred`) set on <html> below.
+  Design tokens live in src/styles.css (raw --alf-* vars + @theme utilities);
+  the shadcn token mapping for the pastel theme lives in src/themes.css.
+-->
+<html lang="en" data-theme="alfred">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..600&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Alfred · your career butler</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

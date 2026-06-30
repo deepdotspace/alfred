@@ -1,0 +1,424 @@
+@import "tailwindcss" source(none);
+@import "./themes.css";
+
+/* Scan local source + SDK components for Tailwind class usage */
+@source "./**/*.{ts,tsx}";
+@source "../node_modules/deepspace/dist/**/*.js";
+
+/*
+ * Theming — pure shadcn/ui CSS variables with [data-theme] selectors.
+ *
+ * The @theme block below holds the default theme (slate). All other themes
+ * live in `themes.css` as `[data-theme="<id>"]` override blocks. Switching
+ * themes = changing the data-theme attribute on <html> in index.html. No
+ * JS, no FOUC.
+ *
+ * Status colors (success, warning, info) are intentionally NOT themed —
+ * they stay consistent across every preset.
+ */
+@theme {
+  /* shadcn core tokens — slate (default): neutral gray on near-black, indigo accent */
+  --color-background: #0a0a0a;
+  --color-foreground: #e8eaed;
+  --color-card: #161616;
+  --color-card-foreground: #e8eaed;
+  --color-popover: #161616;
+  --color-popover-foreground: #e8eaed;
+  --color-primary: #818cf8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e1e1e;
+  --color-secondary-foreground: #e8eaed;
+  --color-muted: #1e1e1e;
+  --color-muted-foreground: #9ca3af;
+  --color-accent: #262626;
+  --color-accent-foreground: #e8eaed;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(60, 64, 67, 0.6);
+  --color-input: rgba(60, 64, 67, 0.6);
+  --color-ring: #818cf8;
+  --radius: 0.5rem;
+
+  /* Status colors — constant across all themes */
+  --color-success: #10b981;
+  --color-success-foreground: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
+
+  /*
+   * Shadows — slate (default). Each theme in themes.css tunes these.
+   *
+   * Toned down 2026-05: previous values were 8px/12px offset with
+   * 32px/40px blur which read as a heavy halo under every Card on
+   * the page. New values are Linear/Stripe-style: barely-there at
+   * rest, slightly more present on hover.
+   *
+   * IMPORTANT: starter components (`Card`, `Dialog`, `CardGrid`,
+   * `Navigation`, `Toast`) intentionally use literal shadow values
+   * via `shadow-[…]` arbitrary-value classes, NOT the
+   * `shadow-card` / `shadow-card-hover` token classes Tailwind v4
+   * generates from this @theme block. Why: Tailwind's @theme directive
+   * compiles these tokens into the utility-class definitions at build
+   * time, and runtime [data-theme] overrides don't always cancel the
+   * baked baseline cleanly — apps switching themes were getting the
+   * slate value carried forward on the compiled `shadow-card` class.
+   * Sidestepping the token system in starter components is the
+   * deterministic fix. See docs/platform/theming-shadows.md.
+   */
+  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.12);
+  --shadow-card-hover: 0 2px 8px 0 rgba(0, 0, 0, 0.16);
+
+  /* Animations */
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+
+  /* Backward-compatibility aliases */
+  --color-surface: var(--color-background);
+  --color-surface-elevated: var(--color-card);
+  --color-surface-overlay: var(--color-muted);
+  --color-surface-input: rgba(30, 41, 59, 0.6);
+  --color-content: var(--color-foreground);
+  --color-content-secondary: var(--color-muted-foreground);
+  --color-content-muted: #64748b;
+  --color-content-inverse: #0f172a;
+  --color-border-strong: rgba(71, 85, 105, 0.5);
+  --color-border-focus: var(--color-ring);
+  --color-primary-hover: #6d7bf5;
+  --color-primary-muted: rgba(129, 140, 248, 0.2);
+  --color-primary-border: rgba(129, 140, 248, 0.3);
+  --color-danger: var(--color-destructive);
+  --color-danger-muted: rgba(239, 68, 68, 0.2);
+  --color-danger-border: rgba(239, 68, 68, 0.4);
+  --color-success-muted: rgba(16, 185, 129, 0.2);
+  --color-success-border: rgba(16, 185, 129, 0.4);
+  --color-warning-muted: rgba(245, 158, 11, 0.2);
+  --color-warning-border: rgba(245, 158, 11, 0.4);
+  --color-info-muted: rgba(59, 130, 246, 0.2);
+  --color-info-border: rgba(59, 130, 246, 0.4);
+}
+
+/* Theme override blocks live in `themes.css` — imported above. */
+
+/*
+ * Animation keyframes for shadcn components.
+ * These replace the tailwindcss-animate plugin which is not compatible with Tailwind v4.
+ */
+@keyframes animate-in {
+  from { opacity: var(--tw-enter-opacity, 1); transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1)) rotate(var(--tw-enter-rotate, 0)); }
+}
+
+@keyframes animate-out {
+  to { opacity: var(--tw-exit-opacity, 1); transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0)); }
+}
+
+@utility animate-in {
+  animation-name: animate-in;
+  animation-duration: 150ms;
+  --tw-enter-opacity: initial;
+  --tw-enter-scale: initial;
+  --tw-enter-translate-x: initial;
+  --tw-enter-translate-y: initial;
+  --tw-enter-rotate: initial;
+}
+
+@utility animate-out {
+  animation-name: animate-out;
+  animation-duration: 150ms;
+  --tw-exit-opacity: initial;
+  --tw-exit-scale: initial;
+  --tw-exit-translate-x: initial;
+  --tw-exit-translate-y: initial;
+  --tw-exit-rotate: initial;
+}
+
+@utility fade-in-0 { --tw-enter-opacity: 0; }
+@utility fade-out-0 { --tw-exit-opacity: 0; }
+@utility zoom-in-95 { --tw-enter-scale: .95; }
+@utility zoom-out-95 { --tw-exit-scale: .95; }
+@utility slide-in-from-top-2 { --tw-enter-translate-y: -0.5rem; }
+@utility slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
+@utility slide-in-from-left-2 { --tw-enter-translate-x: -0.5rem; }
+@utility slide-in-from-right-2 { --tw-enter-translate-x: 0.5rem; }
+@utility slide-out-to-top-2 { --tw-exit-translate-y: -0.5rem; }
+@utility slide-out-to-bottom-2 { --tw-exit-translate-y: 0.5rem; }
+@utility slide-out-to-left-2 { --tw-exit-translate-x: -0.5rem; }
+@utility slide-out-to-right-2 { --tw-exit-translate-x: 0.5rem; }
+
+
+/*
+ * Custom base styles — must be in @layer base so utility classes can override.
+ */
+@layer base {
+  html {
+    /* Default to dark for native form controls (calendar icons, scrollbars).
+     * Light themes opt into `color-scheme: light` in themes.css. */
+    color-scheme: dark;
+  }
+
+  html, body, #root {
+    min-height: 100vh;
+    background-color: var(--color-background);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    color: var(--color-foreground);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 0.25rem;
+    background-color: var(--color-border);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted-foreground);
+  }
+
+  /* Selection styling — Alfred periwinkle */
+  ::selection {
+    background-color: var(--alf-selection);
+  }
+
+  /*
+   * Focus indication is intentionally NOT applied app-wide via a
+   * `*:focus-visible` rule. Doing so paints a colored outline onto
+   * every focusable element on the page — including programmatically
+   * focusable containers like Radix DismissableLayer wrappers,
+   * dialog overlays, and any element with `tabindex={-1}` used for
+   * scroll containment. The result reads as "the entire panel /
+   * dialog is selected" the moment a child button is clicked.
+   *
+   * Per-component focus indicators (e.g. shadcn's
+   * `focus-visible:ring-1` on Button, `focus-visible:border-ring` on
+   * Input / Textarea / Select) are sufficient for keyboard
+   * accessibility and don't bleed onto containers.
+   *
+   * If you DO need a global indicator for very keyboard-heavy apps,
+   * scope it tightly — e.g. only to interactive elements:
+   *
+   *   a:focus-visible,
+   *   button:focus-visible,
+   *   [role="button"]:focus-visible,
+   *   input:focus-visible,
+   *   select:focus-visible,
+   *   textarea:focus-visible {
+   *     outline: 2px solid var(--color-primary);
+   *     outline-offset: 2px;
+   *   }
+   *
+   * — never `*`.
+   */
+
+  /* Prevent 300ms tap delay on mobile */
+  a, button, [role="button"], input, select, textarea {
+    touch-action: manipulation;
+  }
+}
+
+/* ============================================================================
+ * ALFRED DESIGN SYSTEM
+ * The pixel-faithful token + motion layer extracted from the prototype
+ * (docs/design/Alfred.dc.html, catalog docs/specs/DESIGN-SPEC.md §1).
+ * Raw values live once here as --alf-* custom properties (single source of
+ * truth); components reference them by name, never magic hex.
+ * ==========================================================================*/
+
+:root {
+  /* ── Surfaces ─────────────────────────────────────────── */
+  --alf-bg: #E7ECF9;              /* app page background (periwinkle base) */
+  --alf-list: #EDF0FA;           /* list rail / tracker column wells */
+  --alf-surface: #ffffff;        /* cards, panels, nav rail, doc page, top bars */
+  --alf-inset: #FBFCFF;          /* inset input field bg */
+  --alf-dropzone-hover: #F6F8FF; /* resume dropzone hover bg */
+  --alf-chip-soft: #F1F4FC;      /* doc skill chips, soft secondary btns, back btns */
+  --alf-trust: #F6F8FE;          /* refine trust-note bg */
+  --alf-pay-track: #EEF1FA;      /* pay-mode segmented toggle track */
+  --alf-doc-track: #DFE5F4;      /* workspace doc-switch segmented track */
+
+  /* ── Primary / brand (indigo) ─────────────────────────── */
+  --alf-indigo: #3D5AF1;
+  --alf-indigo-disabled: #B9C3E6; /* disabled primary button */
+  --alf-indigo-working: #9CA8E8;  /* primary "working" state */
+  --alf-indigo-tint: #E9EEFF;     /* active nav, +Add, advance, upload icon box */
+  --alf-indigo-tint-2: #EEF1FF;   /* refine chips, dashed add chips, View&edit */
+  --alf-indigo-note-a: #EEF1FE;   /* Alfred's-note gradient start */
+  --alf-indigo-note-b: #EAF4F6;   /* Alfred's-note gradient end */
+  --alf-chip-border: #DDE4FF;     /* refine quick-chip border */
+  --alf-halo: #9DB4FF;            /* halo ring + card hover border */
+  --alf-dash-border: #DDE3F2;     /* dashed empty-state border */
+  --alf-hover-border: #C2CEFB;    /* download-btn hover border */
+
+  /* ── Mascot gradient + avatars ────────────────────────── */
+  --alf-grad-a: #7E93FF;          /* mascot body gradient start */
+  --alf-grad-b: #4E9FE0;          /* mascot body gradient end */
+  --alf-avatar-a: #7C8CF5;        /* user avatar gradient start */
+  --alf-avatar-b: #4E9FE0;        /* user avatar gradient end */
+  --alf-pupil: #23306B;           /* mascot pupils + smile */
+  --alf-green: #34B89C;           /* bowtie, bring-dot, ATS accent */
+  --alf-green-knot: #27977E;      /* bowtie knot */
+  --alf-sparkle: #FFD66B;         /* mascot sparkle dot */
+
+  /* ── Fit-score / semantic ─────────────────────────────── */
+  --alf-strong-bg: #D6F3EA;       --alf-strong-fg: #0E7C66;  /* Strong fit / success */
+  --alf-stretch-bg: #DCEBFF;      --alf-stretch-fg: #2563B8; /* Worth a look / stretch */
+  --alf-toast-check: #7FE3C4;     /* toast check stroke */
+  --alf-amber-bg: #FFF6EC;        --alf-amber-border: #F6E2C8;
+  --alf-amber-text: #7A5520;      --alf-amber-icon: #C57A1E; /* gaps reminder amber */
+  --alf-gaps-circle: #FCE9D6;     /* gaps warning circle */
+  --alf-gap-dot: #E0974A;         /* gap bullet dot */
+  --alf-lastchange-bg: #EAF4F1;   --alf-lastchange-border: #CDE9E0;
+  --alf-lastchange-text: #2C6657; /* LAST CHANGE note body */
+
+  /* ── Text ink scale ───────────────────────────────────── */
+  --alf-ink: #1E2440;             /* primary ink + dark CTA */
+  --alf-ink-doc: #161B33;         /* document name / ref title (near-black) */
+  --alf-body: #37406B;            /* Alfred's note body */
+  --alf-body-2: #3a4270;          /* detail bullets */
+  --alf-body-3: #434b78;          /* doc bullets, skill chip text */
+  --alf-body-4: #454d75;          /* card reason, meta pill text */
+  --alf-body-5: #39406A;          /* doc body copy */
+  --alf-muted: #6B74A0;           /* list company, detail meta, nav back */
+  --alf-muted-2: #5A638E;         /* detail company·location, tailor-idle copy */
+  --alf-label: #6E78A8;           /* field section labels, mono eyebrow */
+  --alf-meta: #7E88B5;            /* mono meta (card meta, today, contact) */
+  --alf-helper: #8A93BD;          /* hints, placeholders region */
+  --alf-disabled: #9098BC;        /* disabled/empty text, inactive nav/tab, JD dot */
+  --alf-faint: #A0A8CB;           /* snippet, lighter helper */
+  --alf-faint-2: #A6AECB;         /* "optional", empty-state */
+  --alf-dot-inactive: #C7D0EC;    /* inactive progress dot, thumbnail bars */
+  --alf-sparkle-icon: #C7CFEA;    /* refine sparkle icon fill */
+
+  /* ── Borders / dividers ───────────────────────────────── */
+  --alf-border: #E2E8F8;          /* workhorse card/panel border + dividers */
+  --alf-border-soft: #E6EAF6;     /* tracker / worth-a-look cards */
+  --alf-hairline: #E8ECF6;        /* document hairline divider */
+  --alf-input-border: #D7DEF2;    /* search / role inputs */
+  --alf-strong-border: #DCE3F7;   /* strong-fit card + Alfred's-note border */
+  --alf-dropzone-dash: #B9C6F2;   /* resume dropzone dashed border (idle) */
+  --alf-skel-a: #EAEFFA;          --alf-skel-b: #F4F7FE; /* skeleton tints */
+  --alf-selection: #C9D6FF;       /* ::selection */
+
+  /* ── Tracker stage dot colors ─────────────────────────── */
+  --alf-stage-saved: #8A93BD;
+  --alf-stage-tailored: #6B4FD6;
+  --alf-stage-applied: #2563B8;
+  --alf-stage-interview: #C57A1E;
+  --alf-stage-offer: #0E7C66;
+
+  /* ── Night register (landing only) ────────────────────────
+   * The day-cycle landing opens and closes at night. These are built from the
+   * existing ink + indigo + halo family (DESIGN-SPEC §1.1), used as "night sky":
+   * deliberate dark contrast that stays on-brand. NOT purple / violet. */
+  --alf-night-1: #161B33;                      /* deepest sky (= ink-doc) */
+  --alf-night-2: #1E2440;                       /* sky base (= ink) */
+  --alf-night-3: #28315E;                        /* lifted indigo (cards on night) */
+  --alf-night-glow: rgba(61, 90, 241, 0.30);     /* indigo primary, as a glow */
+  --alf-night-glow-soft: rgba(61, 90, 241, 0.16);
+  --alf-on-night: #EAEFFE;                        /* primary text on night */
+  --alf-on-night-dim: #AAB6E6;                    /* secondary text on night */
+  --alf-on-night-faint: rgba(170, 182, 230, 0.55);
+  --alf-night-border: rgba(157, 180, 255, 0.16); /* hairline on night (= halo) */
+  --alf-night-card-bg: rgba(255, 255, 255, 0.05);
+  --alf-night-card-border: rgba(157, 180, 255, 0.14);
+  /* Dawn gradient stops (the onboarding radial, DESIGN-SPEC §1.1) -- the
+   * morning the night resolves into. --alf-bg is the periwinkle mid-stop. */
+  --alf-dawn-hi: #EFF1FC;
+  --alf-dawn-lo: #E6F0F4;
+
+  /* White on indigo + landing mockup shadows (token-routed so landing JSX
+   * carries no raw color, per the landing grep gate). */
+  --alf-on-indigo: #ffffff;
+  --alf-shadow-card: 0 4px 24px -14px rgba(30, 40, 80, 0.30);
+  --alf-shadow-glow: 0 6px 24px -12px rgba(61, 90, 241, 0.40);
+}
+
+/* Register the most-used tokens + faces as Tailwind v4 utilities so layout
+ * code can use `bg-alf-bg`, `text-alf-ink`, `border-alf-border`,
+ * `font-display`, `font-mono` and have them resolve to live CSS vars. */
+@theme {
+  --color-alf-bg: var(--alf-bg);
+  --color-alf-list: var(--alf-list);
+  --color-alf-surface: var(--alf-surface);
+  --color-alf-inset: var(--alf-inset);
+  --color-alf-indigo: var(--alf-indigo);
+  --color-alf-indigo-tint: var(--alf-indigo-tint);
+  --color-alf-ink: var(--alf-ink);
+  --color-alf-body: var(--alf-body);
+  --color-alf-muted: var(--alf-muted);
+  --color-alf-meta: var(--alf-meta);
+  --color-alf-helper: var(--alf-helper);
+  --color-alf-disabled: var(--alf-disabled);
+  --color-alf-border: var(--alf-border);
+  --color-alf-border-soft: var(--alf-border-soft);
+
+  --font-display: "Figtree", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ── Motion — every keyframe from DESIGN-SPEC §1.3 ───────── */
+@keyframes alfFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes alfBlink { 0%,90%,100% { transform: scaleY(1); } 94% { transform: scaleY(0.08); } }
+@keyframes alfBob { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes ringPulse { 0% { transform: scale(.7); opacity: .55; } 70% { transform: scale(1.5); opacity: 0; } 100% { opacity: 0; } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panelIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shimmer { 0% { background-position: -360px 0; } 100% { background-position: 360px 0; } }
+@keyframes sparkle { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes dawn { 0% { background: linear-gradient(160deg,#1B2147,#34306B); } 100% { background: linear-gradient(160deg,#E7ECF9,#EDE9FB); } }
+@keyframes scanmove { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+/* ── Helpers ─────────────────────────────────────────────── */
+.mono { font-family: 'DM Mono', ui-monospace, SFMono-Regular, monospace; }
+
+.skel {
+  background: linear-gradient(90deg, var(--alf-skel-a) 25%, var(--alf-skel-b) 50%, var(--alf-skel-a) 75%);
+  background-size: 720px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; }
+}
+
+/* ── Landing (the day-cycle) -- hover + responsive collapse ──── */
+.lp-nav-link { transition: color .15s; }
+.lp-nav-link:hover { color: var(--alf-on-night); }
+.lp-hero-glow { width: 320px; height: 320px; }
+.lp-hero-mascot-inner { transform: scale(1.6); }
+
+@media (max-width: 900px) {
+  .lp-free-grid,
+  .lp-trust-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 760px) {
+  .lp-hero-grid { grid-template-columns: 1fr !important; align-items: start !important; gap: 12px !important; }
+  .lp-hero-mascot { padding: 12px 0 64px; }
+  .lp-hero-mascot-inner { transform: scale(1.15); }
+  .lp-hero-glow { width: 240px; height: 240px; }
+  .lp-beat { grid-template-columns: 1fr !important; gap: 24px !important; }
+  /* keep the visual under the text on every stacked beat */
+  .lp-beat > .lp-beat-visual { order: 2; }
+}
+
+@media (max-width: 560px) {
+  .lp-nav-anchor { display: none; }
+}

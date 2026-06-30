@@ -1,0 +1,53 @@
+/*
+ * Theme overrides — applied via <html data-theme="<id>">.
+ *
+ * Default values live in `styles.css` (@theme block). Alfred ships a single
+ * house theme; its override block is below. The app runs `data-theme="alfred"`
+ * (set in index.html).
+ *
+ * To add a theme:
+ *   1. Copy the block below, rename the selector, change the colors. If the new
+ *      theme is light-on-light, also include `color-scheme: light;` so native
+ *      form controls (calendar icons, scrollbars) match.
+ *   2. Add an entry to `src/themes.ts` so it shows up in the typed catalog.
+ */
+
+/* ── Alfred (the app's shipped theme) ─────────────────────────
+ * Cool periwinkle pastel, indigo accent. Maps the shadcn token set
+ * onto the Alfred palette so any scaffold/shadcn primitive (Toast,
+ * etc.) renders in-world. Alfred's bespoke components use the richer
+ * --alf-* token set in styles.css; this block keeps the baseline
+ * shadcn surface consistent. */
+[data-theme="alfred"] {
+  color-scheme: light;
+  --color-background: #E7ECF9;
+  --color-foreground: #1E2440;
+  --color-card: #ffffff;
+  --color-card-foreground: #1E2440;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1E2440;
+  --color-primary: #3D5AF1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #F1F4FC;
+  --color-secondary-foreground: #1E2440;
+  --color-muted: #EDF0FA;
+  --color-muted-foreground: #6B74A0;
+  --color-accent: #E9EEFF;
+  --color-accent-foreground: #3D5AF1;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #E2E8F8;
+  --color-input: #D7DEF2;
+  --color-ring: #3D5AF1;
+
+  /* Status — Alfred semantics */
+  --color-success: #0E7C66;
+  --color-success-foreground: #ffffff;
+  --color-warning: #C57A1E;
+  --color-warning-foreground: #ffffff;
+  --color-info: #2563B8;
+  --color-info-foreground: #ffffff;
+
+  --shadow-card: 0 1px 2px 0 rgba(30, 40, 80, 0.04);
+  --shadow-card-hover: 0 2px 8px 0 rgba(30, 40, 80, 0.08);
+}

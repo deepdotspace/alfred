@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules
+dist
+.wrangler
+.worker-bundle.js
+*.tgz
+
+# Secrets and local env
+.dev.vars
+.deepspace
+
+# OS / editor cruft
+.DS_Store
+
+# Build brain, specs, design, and resume fixtures (internal, not shipped)
+docs/
+references/
+
+# Agent harness and internal directives (not shipped)
+.claude/
+.agents/
+AGENTS.md
+CLAUDE.md
+
+# Local run artifacts
+brag-output/
+test-results/
+skills-lock.json
