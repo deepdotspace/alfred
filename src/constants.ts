@@ -1,4 +1,4 @@
-import type { RoleFamilyNode } from './types'
+import type { RoleFamilyNode, RoleType } from './types'
 
 /**
  * Brand / display name (shown in the UI). Safe to change freely -- it does NOT
@@ -207,4 +207,24 @@ export function resolveRoleFamilyIds(roleFamilies: readonly string[] | undefined
     }
   }
   return [...out]
+}
+
+/* ----------------------------------------------------- stage intent */
+
+/** The three real early-career stages a user can target (excludes 'unknown'). */
+export const STAGE_INTENTS: RoleType[] = ['internship', 'co-op', 'new-grad-ft']
+
+/**
+ * Normalize a stored targeting `intent` to the real stages: keep only valid
+ * stage values, drop 'unknown' / junk / dupes, and migrate any legacy 'both'
+ * string to all three. An empty result is meaningful (no stage constraint), so
+ * it is preserved. Shared by the matcher's hard filter, the brief, and the
+ * profile UI so every surface reads intent the same way.
+ */
+export function normalizeIntent(intent: readonly (RoleType | string)[] | undefined): RoleType[] {
+  if (!intent?.length) return []
+  if (intent.some((x) => x === 'both')) return [...STAGE_INTENTS]
+  const seen = new Set<RoleType>()
+  for (const x of intent) if (STAGE_INTENTS.includes(x as RoleType)) seen.add(x as RoleType)
+  return STAGE_INTENTS.filter((s) => seen.has(s))
 }

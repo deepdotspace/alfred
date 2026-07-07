@@ -47,6 +47,17 @@ export async function loadProfile(records: OwnerRecords, userId: string): Promis
   return mine[0]?.data ?? null
 }
 
+/**
+ * Mark that a match run COMPLETED for this user (set even when zero candidates
+ * survived). The brief reads `last_match_at` to switch from the "warming" state
+ * to an honest empty state and to stop re-kicking a recompute on every mount.
+ */
+async function markMatchRan(records: OwnerRecords, userId: string): Promise<void> {
+  const rows = (await records.query('profile', { where: { user_id: userId }, limit: 500 })) as Envelope<ProfileData>[]
+  const mine = rows.find((r) => r.data?.user_id === userId)
+  if (mine) await records.update('profile', mine.recordId, { last_match_at: new Date().toISOString() })
+}
+
 async function loadPool(records: OwnerRecords): Promise<Envelope<JobData>[]> {
   return (await records.query('job', { limit: POOL_LIMIT })) as Envelope<JobData>[]
 }
@@ -175,7 +186,14 @@ export async function initMatchState(ctx: MatchCtx, payload: MatchPayload): Prom
 export async function runMatchTick(ctx: MatchCtx, state: MatchState): Promise<{ state: MatchState; done: boolean }> {
   const { records, invoke, signal } = ctx
   const stats = state.stats
-  if (state.cursor >= state.jobIds.length || !invoke) return { state, done: true }
+  if (state.cursor >= state.jobIds.length || !invoke) {
+    // Genuine completion: every candidate scored, including the zero-survivor
+    // case (jobIds empty). Mark the run so the brief shows an honest empty state
+    // and stops re-kicking. (!invoke with candidates still pending is a
+    // test/offline no-op, not a completion -> don't mark.)
+    if (state.cursor >= state.jobIds.length) await markMatchRan(records, state.userId)
+    return { state, done: true }
+  }
 
   const now = new Date().toISOString()
   let ops = 0
@@ -221,7 +239,9 @@ export async function runMatchTick(ctx: MatchCtx, state: MatchState): Promise<{ 
     }
   }
 
-  return { state, done: state.cursor >= state.jobIds.length }
+  const done = state.cursor >= state.jobIds.length
+  if (done) await markMatchRan(records, state.userId)
+  return { state, done }
 }
 
 /* ----------------------------------------------------- inline dev preview */

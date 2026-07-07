@@ -94,7 +94,7 @@ export function useBriefData(): BriefData {
   const jobs = useMemo(() => jobQ.records.map((r) => r.data), [jobQ.records])
 
   const stats = useMemo(
-    () => computeBriefStats(matches, rows, jobs, profile?.targeting?.role_families),
+    () => computeBriefStats(matches, rows, jobs, profile?.targeting?.role_families, Date.now(), !!profile?.last_match_at),
     [matches, rows, jobs, profile],
   )
 
@@ -127,9 +127,14 @@ export function useBriefData(): BriefData {
     if (kickedRef.current) return
     if (status !== 'ready' || !hasProfile) return
     if (matchQ.records.length > 0) return
+    // A completed run that found zero survivors leaves zero match rows but sets
+    // profile.last_match_at. Don't re-kick a full recompute on every mount in
+    // that case -- show the honest empty state instead. Only warm the pool when
+    // NO run has ever completed for this user.
+    if (profile?.last_match_at) return
     kickedRef.current = true
     void recompute('full')
-  }, [status, hasProfile, matchQ.records.length, recompute])
+  }, [status, hasProfile, matchQ.records.length, profile, recompute])
 
   const markSeen = useCallback((jobId: string) => {
     void callAction('match-mark-seen', { jobId })

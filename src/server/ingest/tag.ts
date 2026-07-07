@@ -80,5 +80,5 @@ export async function tagJob(
   } catch {
     // fall through to the keyword/default below
   }
-  return { families: kw.length ? kw.slice(0, 2) : ['swe-general'], taggedBy: kw.length ? 'keyword' : 'keyword' }
+  return { families: kw.length ? kw.slice(0, 2) : ['swe-general'], taggedBy: 'keyword' }
 }

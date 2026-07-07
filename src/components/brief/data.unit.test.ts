@@ -11,7 +11,16 @@
  * Run: npx vitest run src/components/brief/data.unit.test.ts
  */
 import { describe, it, expect } from 'vitest'
-import { assembleBriefRows, computeBriefStats, roleIdentity } from './helpers'
+import {
+  assembleBriefRows,
+  computeBriefStats,
+  roleIdentity,
+  effectivePostedMs,
+  effectiveAge,
+  sortBriefRows,
+  filterRecent,
+  type BriefRow,
+} from './helpers'
 import type { JobData, MatchData, Qualify } from '../../types'
 
 function job(recordId: string, company: string, title: string, over: Partial<JobData> = {}): [string, JobData] {
@@ -209,5 +218,54 @@ describe('computeBriefStats', () => {
     const s = computeBriefStats([], [], pool(300, 0), ['fullstack'], NOW)
     expect(s.consideredTotal).toBe(0)
     expect(s.isFirstBrief).toBe(false)
+  })
+})
+
+describe('feed freshness (effective date / sort / filter)', () => {
+  const NOW = Date.parse('2026-06-29T12:00:00.000Z')
+
+  function row(id: string, over: Partial<JobData> = {}, matchOver: Partial<MatchData> = {}): BriefRow {
+    const [, j] = job(id, `Co_${id}`, `Role ${id}`, over)
+    return { jobId: id, job: j, match: match(id, 'yes', 80, matchOver) }
+  }
+
+  it('effectivePostedMs uses posted_date when present, else first_ingested_at, else 0', () => {
+    const [, dated] = job('a', 'A', 'A', { posted_date: '2026-06-20', first_ingested_at: '2026-06-25T00:00:00.000Z' })
+    expect(effectivePostedMs(dated)).toBe(Date.parse('2026-06-20'))
+
+    const [, undated] = job('b', 'B', 'B', { posted_date: null, first_ingested_at: '2026-06-25T00:00:00.000Z' })
+    expect(effectivePostedMs(undated)).toBe(Date.parse('2026-06-25T00:00:00.000Z'))
+
+    const [, none] = job('c', 'C', 'C', { posted_date: null, first_ingested_at: null as unknown as string })
+    expect(effectivePostedMs(none)).toBe(0)
+  })
+
+  it('effectiveAge flags approximate only when it falls back to the ingest date', () => {
+    const [, dated] = job('a', 'A', 'A', { posted_date: '2026-06-20' })
+    expect(effectiveAge(dated).approx).toBe(false)
+
+    const [, undated] = job('b', 'B', 'B', { posted_date: null, first_ingested_at: '2026-06-27T00:00:00.000Z' })
+    expect(effectiveAge(undated).approx).toBe(true)
+    expect(effectiveAge(undated).text).toBeTruthy()
+  })
+
+  it('sortBriefRows "latest" is freshest-first; "fit" is strongest-first', () => {
+    const fresh = row('fresh', { posted_date: '2026-06-28' }, { qualify: 'stretch', score: 60 })
+    const stale = row('stale', { posted_date: '2026-06-02' }, { qualify: 'yes', score: 95 })
+
+    expect(sortBriefRows([stale, fresh], 'latest').map((r) => r.jobId)).toEqual(['fresh', 'stale'])
+    // A strong-but-older role wins under "fit" even though it is much older.
+    expect(sortBriefRows([fresh, stale], 'fit').map((r) => r.jobId)).toEqual(['stale', 'fresh'])
+  })
+
+  it('filterRecent keeps rows within RECENT_DAYS by effective date, including undated-but-newly-found', () => {
+    const rows = [
+      row('freshDated', { posted_date: '2026-06-28' }), // ~1d
+      row('oldDated', { posted_date: '2026-06-01' }), // 28d
+      row('undatedFresh', { posted_date: null, first_ingested_at: '2026-06-27T00:00:00.000Z' }), // ~2d
+      row('undatedOld', { posted_date: null, first_ingested_at: '2026-05-01T00:00:00.000Z' }), // ~59d
+    ]
+    const kept = new Set(filterRecent(rows, NOW).map((r) => r.jobId))
+    expect(kept).toEqual(new Set(['freshDated', 'undatedFresh']))
   })
 })

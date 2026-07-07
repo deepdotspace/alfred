@@ -60,6 +60,8 @@ export interface UseTailor {
   coverGated: boolean
   lastRefine: string | null
   error: string | null
+  /** Did the resume pass the honesty verify loop? false = some lines could not be verified -> degrade the trust note. */
+  verified: boolean
   start: () => void
   refine: (note: string) => void
   download: (type: 'resume' | 'cover_letter', format: 'pdf' | 'docx') => Promise<string>
@@ -175,6 +177,7 @@ export function useTailor(jobId: string): UseTailor {
     coverGated,
     lastRefine,
     error,
+    verified: resumeDoc?.verified ?? true,
     start,
     refine,
     download,

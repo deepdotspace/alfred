@@ -46,26 +46,15 @@ export const STAGE_TYPE_OPTIONS: { value: RoleType; label: string }[] = [
   { value: 'new-grad-ft', label: 'New grad' },
 ]
 
-/** The three real stages a user can target (excludes 'unknown'). */
-const STAGE_INTENTS: RoleType[] = ['internship', 'co-op', 'new-grad-ft']
-
 /** Toggle one stage in the intent array (add if absent, remove if present). */
 export function toggleIntent(intent: readonly RoleType[], value: RoleType): RoleType[] {
   return intent.includes(value) ? intent.filter((x) => x !== value) : [...intent, value]
 }
 
-/**
- * Normalize a stored intent to the real stages: keep only valid stage values,
- * drop 'unknown' / dupes, and migrate any legacy 'both' string to all three.
- * An empty result is meaningful (no stage constraint), so it is preserved.
- */
-export function normalizeIntent(intent: readonly (RoleType | string)[] | undefined): RoleType[] {
-  if (!intent?.length) return []
-  if (intent.some((x) => x === 'both')) return [...STAGE_INTENTS]
-  const seen = new Set<RoleType>()
-  for (const x of intent) if (STAGE_INTENTS.includes(x as RoleType)) seen.add(x as RoleType)
-  return STAGE_INTENTS.filter((s) => seen.has(s))
-}
+// normalizeIntent + STAGE_INTENTS live in constants.ts so the matcher (server)
+// and the profile UI (client) share ONE definition. Re-exported here for the
+// onboarding + profile import sites.
+export { normalizeIntent } from '../../constants'
 
 /* ------------------------------------------------------- role id <-> label */
 

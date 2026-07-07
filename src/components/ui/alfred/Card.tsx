@@ -2,7 +2,6 @@
  * Card surfaces (DESIGN-SPEC §4).
  *  - Card        : the white #fff / 1px #E2E8F8 / radius-18 workhorse surface
  *  - RoleCard    : the brief-list role card (avatar + title + reason + meta + fit)
- *  - TrackerCard : the kanban card (avatar + title + Open/advance)
  */
 import { type CSSProperties, type ReactNode, useState } from 'react'
 import { FitBadge, type FitVariant } from './FitBadge'
@@ -99,36 +98,5 @@ export function RoleCard({ initial, avBg, avFg, title, company, reason, metaLine
         <span className="mono" style={{ fontSize: 11, color: 'var(--alf-meta)' }}>{metaLine}</span>
       </div>
     </button>
-  )
-}
-
-/* ── Tracker card ─────────────────────────────────────────── */
-export interface TrackerCardProps {
-  initial: string
-  avBg: string
-  avFg: string
-  title: string
-  company: string
-  onOpen?: () => void
-  onAdvance?: () => void
-  canAdvance?: boolean
-}
-export function TrackerCard({ initial, avBg, avFg, title, company, onOpen, onAdvance, canAdvance = true }: TrackerCardProps) {
-  return (
-    <div style={{ background: 'var(--alf-surface)', border: '1px solid var(--alf-border-soft)', borderRadius: 14, padding: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: avBg, color: avFg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>{initial}</div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--alf-helper)' }}>{company}</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={onOpen} style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--alf-muted-2)', background: 'var(--alf-chip-soft)', border: 'none', padding: 7, borderRadius: 8, cursor: 'pointer' }}>Open</button>
-        {canAdvance && (
-          <button onClick={onAdvance} title="Move forward" style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--alf-indigo)', background: 'var(--alf-indigo-tint)', border: 'none', padding: '7px 11px', borderRadius: 8, cursor: 'pointer' }}>→</button>
-        )}
-      </div>
-    </div>
   )
 }

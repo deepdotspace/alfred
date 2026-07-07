@@ -298,6 +298,13 @@ export interface ProfileData {
   settings: ProfileSettings
   created_at: string
   updated_at: string
+  /**
+   * Set by the matcher when a recompute COMPLETES (even with zero surviving
+   * candidates). The brief reads it to show an honest empty state and to stop
+   * re-kicking a recompute on every mount once a run has finished. Absent means
+   * a match run has never completed for this user yet.
+   */
+  last_match_at?: string
 }
 
 /* --------------------------------------------------- match (PERSONAL) */

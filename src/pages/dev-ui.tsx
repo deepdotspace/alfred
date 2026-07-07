@@ -10,7 +10,7 @@ import { AppShell } from '../components/shell/AppShell'
 import { useToast } from '../components/ui'
 import {
   Button, Chip, AddChip, StageSegmented, PillToggle, MetaPill, ResumeChip, DocSkillChip, RefineChip,
-  FitBadge, Card, RoleCard, TrackerCard, Tabs, VisaToggle, Slider, ProgressDots, SearchMultiSelect,
+  FitBadge, Card, RoleCard, Tabs, VisaToggle, Slider, ProgressDots, SearchMultiSelect,
   AlfredNote, TrustNote, SkelBar, SkeletonLines, DownloadIcon, RefreshIcon, UploadIcon,
 } from '../components/ui/alfred'
 
@@ -165,7 +165,7 @@ function Showcase() {
           </div>
         </Section>
 
-        <Section title="Role card + tracker card">
+        <Section title="Role card">
           <div style={{ width: 394 }}>
             <RoleCard
               initial="F" avBg="#E7E1FB" avFg="#6B4FD6"
@@ -174,9 +174,6 @@ function Showcase() {
               metaLine="Hybrid · Internship · Summer 2026 · 6h ago"
               fitLabel="Strong fit" fitScore={94} fitVariant="strong" strong
             />
-          </div>
-          <div style={{ width: 260 }}>
-            <TrackerCard initial="A" avBg="#DCE7FB" avFg="#2E6BD6" title="Associate Product Manager" company="Atlassian" />
           </div>
         </Section>
 

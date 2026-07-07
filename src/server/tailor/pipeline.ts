@@ -85,13 +85,23 @@ export async function runResumePipeline(
     rounds.push({ round, report })
   }
 
-  // Deterministic honesty backstop: if the loop did not fully converge, apply the
-  // verifier's own honest fixes so the shipped resume contains no flagged claim.
-  if (report.flagged.length > 0) {
-    content = applyResumeFixes(content, report.flagged)
+  // Derive the honesty outcome from what actually happened -- never assert it.
+  let clean: boolean
+  if (report.verifierFailed) {
+    // Could not verify (call/parse/empty failure even after a retry). Fail closed:
+    // ship the draft but do NOT claim it was verified.
+    clean = false
+  } else if (report.flagged.length > 0) {
+    // The loop did not fully converge. Apply the verifier's own honest fixes; the
+    // run is clean only if every flagged claim was actually matched and resolved.
+    const applied = applyResumeFixes(content, report.flagged)
+    content = applied.content
+    clean = applied.allResolved
+  } else {
+    clean = true
   }
 
-  return { content, gaps, rounds, clean: true }
+  return { content, gaps, rounds, clean }
 }
 
 export interface CoverPipelineOpts {
@@ -131,8 +141,15 @@ export async function runCoverPipeline(
   }
 
   let content: CoverDocContent = assembleCover(paragraphs, profile, job)
-  if (report.flagged.length > 0) {
-    content = applyCoverFixes(content, report.flagged)
+  let clean: boolean
+  if (report.verifierFailed) {
+    clean = false
+  } else if (report.flagged.length > 0) {
+    const applied = applyCoverFixes(content, report.flagged)
+    content = applied.content
+    clean = applied.allResolved
+  } else {
+    clean = true
   }
-  return { content, rounds, clean: true }
+  return { content, rounds, clean }
 }

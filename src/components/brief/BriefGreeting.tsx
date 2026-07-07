@@ -70,11 +70,13 @@ const HEADLINE: React.CSSProperties = {
 const HELPER: React.CSSProperties = { fontSize: 14, color: 'var(--alf-helper)', maxWidth: 360, lineHeight: 1.55 }
 
 export function BriefGreeting({ firstName, status, hasProfile, recomputing, stats, onAdjustTargeting }: BriefGreetingProps) {
-  const { scanVolume, consideredTotal, readLatestCycle, worth, strong, isFirstBrief } = stats
+  const { scanVolume, consideredTotal, readLatestCycle, worth, strong, isFirstBrief, matchRan } = stats
 
-  // Warming: no verdicts yet (first read in progress, or profile still loading).
-  const warming = status === 'loading' || !hasProfile || consideredTotal === 0
-  // Genuine empty: Alfred has read postings but none qualified for this user.
+  // Warming = "never ran yet": data still loading, or a first read is genuinely
+  // in flight (no run has completed). Once a run has COMPLETED (matchRan) -- even
+  // with zero survivors -- we leave warming for the honest empty state below.
+  const warming = status === 'loading' || !hasProfile || (consideredTotal === 0 && !matchRan)
+  // Genuine empty: a run completed but nothing qualified for this user.
   const empty = !warming && worth === 0
 
   if (warming) {

@@ -17,7 +17,7 @@
  *                    locations + no remote/anywhere)
  */
 import type { JobData, TargetingPrefs, WorkAuthorization } from '../../types'
-import { resolveRoleFamilyIds } from '../../constants'
+import { resolveRoleFamilyIds, normalizeIntent } from '../../constants'
 
 export interface FilterVerdict {
   pass: boolean
@@ -123,8 +123,12 @@ export function hardFilter(targeting: TargetingPrefs | undefined, job: JobData, 
   }
 
   // role type / intent: drop a known role_type the user did not ask for.
-  if (t?.intent?.length && job.role_type !== 'unknown') {
-    if (!t.intent.includes(job.role_type)) {
+  // Normalize the stored intent first (legacy 'both' / junk values) so a stale
+  // intent can never hard-reject the whole pool. An empty normalized intent
+  // means no role_type constraint (matches all stages), per the design.
+  const intent = normalizeIntent(t?.intent)
+  if (intent.length && job.role_type !== 'unknown') {
+    if (!intent.includes(job.role_type)) {
       return { pass: false, reason: `role type ${job.role_type} not in intent` }
     }
   }

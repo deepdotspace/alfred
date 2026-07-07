@@ -108,17 +108,47 @@ export function fitDisplay(q: Qualify): FitDisplay {
 
 /* ----------------------------------------------------------------- time */
 
-export function relativePosted(postedDate: string | null): string | null {
-  if (!postedDate) return null
-  const t = Date.parse(postedDate)
-  if (!Number.isFinite(t)) return null
-  const days = Math.floor((Date.now() - t) / 86_400_000)
+function relLabel(ms: number, now: number = Date.now()): string {
+  const days = Math.floor((now - ms) / 86_400_000)
   if (days <= 0) return 'today'
   if (days === 1) return '1d ago'
   if (days < 7) return `${days}d ago`
   if (days < 30) return `${Math.floor(days / 7)}w ago`
   if (days < 365) return `${Math.floor(days / 30)}mo ago`
   return `${Math.floor(days / 365)}y ago`
+}
+
+export function relativePosted(postedDate: string | null): string | null {
+  if (!postedDate) return null
+  const t = Date.parse(postedDate)
+  if (!Number.isFinite(t)) return null
+  return relLabel(t)
+}
+
+/**
+ * A job's effective freshness timestamp: its source `posted_date` when present,
+ * else when Alfred first ingested it. Some sources (Firecrawl, a few ATS list
+ * endpoints) give no posted_date; without this fallback those postings have no
+ * age at all -- they can never sort or read as "fresh" even the day we find
+ * them, and they slip past age-based expiry. Returns 0 only when neither parses.
+ */
+export function effectivePostedMs(job: Pick<JobData, 'posted_date' | 'first_ingested_at'>): number {
+  const p = job.posted_date ? Date.parse(job.posted_date) : NaN
+  if (Number.isFinite(p)) return p
+  const f = job.first_ingested_at ? Date.parse(job.first_ingested_at) : NaN
+  return Number.isFinite(f) ? f : 0
+}
+
+/**
+ * Human age label for the card/detail meta. Uses the effective date, and flags
+ * it approximate (rendered with a `~` / "Found") when we fall back to the ingest
+ * date because the source gave no posted_date -- so we never imply a precise
+ * posting age we do not actually have.
+ */
+export function effectiveAge(job: Pick<JobData, 'posted_date' | 'first_ingested_at'>): { text: string | null; approx: boolean } {
+  const ms = effectivePostedMs(job)
+  if (!ms) return { text: null, approx: false }
+  return { text: relLabel(ms), approx: !job.posted_date }
 }
 
 /* ------------------------------------------------------------------ pay */
@@ -187,8 +217,8 @@ export function cardMetaLine(job: JobData, opts: { needsSponsor: boolean }): str
   const rt = roleTypeLabel(job.role_type)
   if (rt) parts.push(rt)
   if (job.term) parts.push(job.term)
-  const posted = relativePosted(job.posted_date)
-  if (posted) parts.push(posted)
+  const age = effectiveAge(job)
+  if (age.text) parts.push(age.approx ? `~${age.text}` : age.text)
   if (opts.needsSponsor) parts.push(sponsorChipText(job.sponsorship))
   return parts.join(' · ')
 }
@@ -202,8 +232,8 @@ export function detailMetaPills(job: JobData): string[] {
   const termPart = [rt, job.term].filter(Boolean).join(' · ')
   if (termPart) pills.push(termPart)
   pills.push(formatPay(job.pay) ?? 'Pay not stated')
-  const posted = relativePosted(job.posted_date)
-  if (posted) pills.push(`Posted ${posted}`)
+  const age = effectiveAge(job)
+  if (age.text) pills.push(age.approx ? `Found ~${age.text}` : `Posted ${age.text}`)
   return pills
 }
 
@@ -325,6 +355,9 @@ export interface BriefStats {
   consideredTotal: number
   readLatestCycle: number
   isFirstBrief: boolean
+  /** True once a match run has COMPLETED for this user (from profile.last_match_at).
+   *  Distinguishes "still warming up" (never ran) from an honest zero-result run. */
+  matchRan: boolean
 }
 
 const DAY_MS = 86_400_000
@@ -335,6 +368,7 @@ export function computeBriefStats(
   jobs: readonly JobData[],
   roleFamilies: readonly string[] | undefined,
   now: number = Date.now(),
+  matchRan: boolean = false,
 ): BriefStats {
   let activePool = 0
   for (const j of jobs) if (j.active !== false) activePool++
@@ -369,6 +403,7 @@ export function computeBriefStats(
     consideredTotal,
     readLatestCycle,
     isFirstBrief: consideredTotal > 0 && consideredTotal === readLatestCycle,
+    matchRan,
   }
 }
 
@@ -383,4 +418,52 @@ export function sourceAttribution(job: JobData): string | null {
   }
   const label = map[job.ats]
   return label ? `via ${label}` : null
+}
+
+/* ------------------------------------------------------- feed sort + filter */
+
+export type BriefSort = 'latest' | 'fit'
+export type BriefFilter = 'recent' | 'all'
+
+/**
+ * "Recent" = posted or found within this many days. Older matches are never
+ * dropped -- they stay one tap away under the "All" filter -- they are only kept
+ * out of the default view so a wall of weeks-old postings does not bury today's
+ * fresh, strong matches. The realistic live pool reaches ~60-90 days, so this
+ * window is what separates "this is new" from "this has been sitting here".
+ */
+export const RECENT_DAYS = 14
+
+/**
+ * Re-order an already-assembled feed by the user's chosen sort. `latest` puts
+ * the freshest postings first (ties broken by fit), so the day's new roles rise;
+ * `fit` is the original strongest-first order (ties broken by recency). Pure and
+ * non-mutating -- assembleBriefRows still owns the dedupe/keep-best-per-role.
+ */
+export function sortBriefRows(rows: readonly BriefRow[], sort: BriefSort): BriefRow[] {
+  const copy = [...rows]
+  if (sort === 'latest') {
+    copy.sort((a, b) => {
+      const t = effectivePostedMs(b.job) - effectivePostedMs(a.job)
+      if (t) return t
+      const q = (QUALIFY_RANK[b.match.qualify] ?? 0) - (QUALIFY_RANK[a.match.qualify] ?? 0)
+      if (q) return q
+      return (b.match.score ?? 0) - (a.match.score ?? 0)
+    })
+  } else {
+    copy.sort((a, b) => {
+      const q = (QUALIFY_RANK[b.match.qualify] ?? 0) - (QUALIFY_RANK[a.match.qualify] ?? 0)
+      if (q) return q
+      const s = (b.match.score ?? 0) - (a.match.score ?? 0)
+      if (s) return s
+      return effectivePostedMs(b.job) - effectivePostedMs(a.job)
+    })
+  }
+  return copy
+}
+
+/** Rows posted or found within `days`. Everything else lives under "All". */
+export function filterRecent(rows: readonly BriefRow[], now: number = Date.now(), days: number = RECENT_DAYS): BriefRow[] {
+  const cutoff = now - days * DAY_MS
+  return rows.filter((r) => effectivePostedMs(r.job) >= cutoff)
 }

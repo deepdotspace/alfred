@@ -80,4 +80,16 @@ export async function runTask(name: string, env: Env): Promise<void> {
     }
     return
   }
+
+  if (name === 'digest') {
+    // Send each due user their morning brief. runDigestCron builds its own owner
+    // context (records + owner-billed integrations) and is cadence-gated +
+    // idempotent per user, so it is safe to re-run.
+    await runDigestCron(env)
+    return
+  }
+
+  // A task declared in `tasks` but not dispatched above would otherwise silently
+  // no-op (the digest bug). Fail loudly instead. Mirrors runJob in src/jobs.ts.
+  throw new Error(`Unknown cron task: ${name}`)
 }

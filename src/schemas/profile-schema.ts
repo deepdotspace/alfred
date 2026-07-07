@@ -30,6 +30,9 @@ export const profileSchema: CollectionSchema = {
     { name: 'settings', storage: 'text', interpretation: { kind: 'json' } },
     { name: 'created_at', storage: 'text', interpretation: { kind: 'datetime' } },
     { name: 'updated_at', storage: 'text', interpretation: { kind: 'datetime' } },
+    // Server-written marker: when the matcher last COMPLETED a run for this user
+    // (set even on a zero-survivor run). Drives the brief's honest empty state.
+    { name: 'last_match_at', storage: 'text', interpretation: { kind: 'datetime' } },
   ],
   permissions: {
     viewer: { read: 'own', create: true, update: 'own', delete: 'own' },

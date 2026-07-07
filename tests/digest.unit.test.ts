@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { isDigestDue, pickItems } from '../src/server/digest/select'
 import { digestSubject, stripEmDashes } from '../src/server/digest/email'
+import { isDeadStatus } from '../src/server/digest/verify-links'
 import { DIGEST_SCORE_FLOOR, DIGEST_MAX_ITEMS } from '../src/server/digest/constants'
 import type { JobData, MatchData } from '../src/types'
 import type { Envelope } from '../src/server/digest/types'
@@ -99,6 +100,25 @@ describe('pickItems (quality bar + novelty)', () => {
       matches.push(env(`m${i}`, match(`k${i}`, { score: 70 + (i % 20) })))
     }
     expect(pickItems(matches, big, new Set(), NaN).length).toBe(DIGEST_MAX_ITEMS)
+  })
+})
+
+describe('isDeadStatus (link verify keeps transient 5xx)', () => {
+  it('drops only the genuinely-gone statuses', () => {
+    expect(isDeadStatus(404)).toBe(true)
+    expect(isDeadStatus(410)).toBe(true)
+    expect(isDeadStatus(451)).toBe(true)
+  })
+  it('keeps transient 5xx so a briefly-erroring ATS does not permanently exclude an alive job', () => {
+    expect(isDeadStatus(500)).toBe(false)
+    expect(isDeadStatus(502)).toBe(false)
+    expect(isDeadStatus(503)).toBe(false)
+  })
+  it('keeps ok / anti-bot statuses', () => {
+    expect(isDeadStatus(200)).toBe(false)
+    expect(isDeadStatus(401)).toBe(false)
+    expect(isDeadStatus(403)).toBe(false)
+    expect(isDeadStatus(429)).toBe(false)
   })
 })
 

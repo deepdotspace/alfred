@@ -95,6 +95,19 @@ describe('hardFilter', () => {
     expect(hardFilter(internOnly, job({ role_type: 'new-grad-ft', term: null }), NOW).pass).toBe(false)
   })
 
+  it('normalizes a legacy "both" intent at the filter (stale intent never rejects the pool)', () => {
+    // Pre-fix: a stored ['both'] made the role_type filter reject every job ->
+    // silent zero matches. It must normalize to all three stages and keep them.
+    const legacy: TargetingPrefs = { ...targeting, intent: ['both' as RoleType] }
+    expect(hardFilter(legacy, job({ role_type: 'new-grad-ft', term: null }), NOW).pass).toBe(true)
+    expect(hardFilter(legacy, job({ role_type: 'internship', term: 'Fall 2026' }), NOW).pass).toBe(true)
+  })
+
+  it('treats a junk-only intent as no stage constraint (matches all stages)', () => {
+    const junk: TargetingPrefs = { ...targeting, intent: ['garbage' as RoleType] }
+    expect(hardFilter(junk, job({ role_type: 'new-grad-ft', term: null }), NOW).pass).toBe(true)
+  })
+
   it('excludes explicit no-sponsorship only when the user needs it', () => {
     const needsVisa: TargetingPrefs = { ...targeting, work_authorization: 'need-sponsorship-now' }
     expect(hardFilter(needsVisa, job({ sponsorship: 'none' }), NOW).pass).toBe(false)

@@ -13,7 +13,7 @@ import type { Ats, AtsSlugData, MetaData } from '../../types'
 import type { IntegrationInvoke } from '../integrations'
 import type { Envelope, IngestPayload, IngestState, NormalizedJob, OwnerRecords } from './types'
 import { emptyStats } from './types'
-import { buildPoolMaps, upsertJob, shouldExpire, type PoolMaps } from './pool'
+import { buildPoolMaps, upsertJob, shouldExpire, shouldPurge, type PoolMaps } from './pool'
 import { slugFromUrl } from './normalize'
 import { loadMeta, upsertMeta } from './meta'
 import { fetchSimplify, SIMPLIFY_INTERN_URL, SIMPLIFY_NEWGRAD_URL } from './sources/simplify'
@@ -291,7 +291,14 @@ export async function runIngestTick(
     let i = state.expireIdx
     while (i < maps.ordered.length && ops < OP_BUDGET) {
       const env = maps.ordered[i]
-      if (shouldExpire(env.data, nowMs)) {
+      if (state.mode === 'backfill' && shouldPurge(env.data, nowMs)) {
+        // Backfill (weekly) hard-deletes clearly-dead rows (inactive + posted
+        // >180d) so the pool never outgrows POOL_QUERY_LIMIT and blinds dedupe.
+        // Chunked by the op budget, same as soft-expiry.
+        await records.delete('job', env.recordId)
+        ops++
+        stats.purged++
+      } else if (shouldExpire(env.data, nowMs)) {
         await records.update('job', env.recordId, { active: false })
         ops++
         stats.expired++

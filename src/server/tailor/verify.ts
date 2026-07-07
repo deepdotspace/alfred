@@ -49,19 +49,49 @@ function toReport(findings: VerifyFinding[]): VerifyReport {
   return { supported, embellished, fabricated, flagged }
 }
 
+/**
+ * One verify attempt. Returns a report ONLY when the verifier produced a usable
+ * result: a successful parse whose `findings` is a well-formed, populated array.
+ * The prompt requires one entry per claim (supported ones included), so real
+ * content always yields >=1 finding -- an absent/non-array `findings`, an empty
+ * array, or a salvaged `{}` is NOT a clean pass but a dropped/degenerate
+ * response, so it returns null for the caller to retry / fail closed.
+ */
+async function runVerifyOnce(
+  invoke: IntegrationInvoke,
+  system: string,
+  user: string,
+): Promise<VerifyReport | null> {
+  let out: { findings?: RawFinding[] }
+  try {
+    out = await haikuJson<{ findings?: RawFinding[] }>(invoke, {
+      system,
+      user,
+      maxTokens: 4096,
+      temperature: 0,
+    })
+  } catch {
+    return null // call or JSON-parse failure -> not a verifiable result
+  }
+  if (!Array.isArray(out.findings) || out.findings.length === 0) return null
+  const findings = out.findings.map(coerceFinding).filter((f): f is VerifyFinding => !!f)
+  if (findings.length === 0) return null // entries present but none had a usable claim -> degenerate
+  return toReport(findings)
+}
+
 async function runVerify(
   invoke: IntegrationInvoke,
   system: string,
   user: string,
 ): Promise<VerifyReport> {
-  const out = await haikuJson<{ findings?: RawFinding[] }>(invoke, {
-    system,
-    user,
-    maxTokens: 4096,
-    temperature: 0,
-  })
-  const findings = (out.findings ?? []).map(coerceFinding).filter((f): f is VerifyFinding => !!f)
-  return toReport(findings)
+  // A genuine clean pass returns findings with zero flagged; a dropped/degenerate
+  // response returns null. Retry once before giving up so a transient blip does
+  // not block an otherwise-honest document.
+  const report = (await runVerifyOnce(invoke, system, user)) ?? (await runVerifyOnce(invoke, system, user))
+  if (report) return report
+  // Two attempts produced no usable verification. Fail closed: signal that the
+  // content is UNVERIFIED so the pipeline never stamps it clean.
+  return { supported: 0, embellished: 0, fabricated: 0, flagged: [], verifierFailed: true }
 }
 
 export function verifyResume(invoke: IntegrationInvoke, masterContext: string, generatedJson: string): Promise<VerifyReport> {

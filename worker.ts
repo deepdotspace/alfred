@@ -698,18 +698,35 @@ app.get(
   ),
 )
 
-app.get(
-  '/ws/cron/:roomId',
-  wsRoute(
-    (env) => env.CRON_ROOMS,
-    // Authenticated users get write access (trigger / pause / resume).
-    // Anonymous connections fall through with no role and become viewers,
-    // which CronRoom enforces as read-only. Apps that want stricter access
-    // (e.g. owner-only) should replace this with an inline handler that
-    // resolves role from app state — see the /ws/yjs route for the pattern.
-    () => ({ role: 'member' }),
-  ),
-)
+// /ws/cron — owner-only control of the app-wide, owner-billed cron. The cron
+// runs ingest/match/digest on the OWNER's budget, so only the app owner may
+// trigger / pause / resume tasks; every other connection (signed-in or
+// anonymous) is a read-only viewer, which CronRoom enforces. Role is resolved
+// from OWNER_USER_ID here, mirroring the owner-scoped /ws/yjs pattern.
+app.get('/ws/cron/:roomId', async (c) => {
+  const roomId = c.req.param('roomId')
+  const url = new URL(c.req.url)
+  const token = url.searchParams.get('token')
+  const auth = token ? (await verifyJwt(jwtConfig(c.env), token)).result : null
+  if (token && !auth) return new Response('Unauthorized', { status: 401 })
+
+  const doUrl = new URL(c.req.url)
+  doUrl.searchParams.delete('token')
+  for (const k of ['userId', 'userName', 'userEmail', 'userImageUrl', 'role']) {
+    doUrl.searchParams.delete(k)
+  }
+  if (auth) {
+    doUrl.searchParams.set('userId', auth.userId)
+    if (auth.claims.name) doUrl.searchParams.set('userName', auth.claims.name)
+    if (auth.claims.email) doUrl.searchParams.set('userEmail', auth.claims.email)
+    if (auth.claims.image) doUrl.searchParams.set('userImageUrl', auth.claims.image)
+    doUrl.searchParams.set('role', auth.userId === c.env.OWNER_USER_ID ? 'member' : 'viewer')
+  }
+
+  const ns = c.env.CRON_ROOMS
+  const stub = ns.get(ns.idFromName(roomId))
+  return stub.fetch(new Request(doUrl.toString(), c.req.raw))
+})
 
 app.get(
   '/ws/jobs/:roomId',

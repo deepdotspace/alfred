@@ -4,10 +4,11 @@
  * ones. This protects Alfred's honesty promise -- never send someone to a 404.
  *
  * Deliberately LENIENT: a link is dropped only on a clear-dead signal
- * (connection error, or 404 / 410 / 451 / 5xx). Anti-bot responses
- * (401 / 403 / 405 / 429) and redirects are KEPT -- the posting exists, the ATS
- * is just gating automated probes. Over-aggressive dropping would silently
- * shrink honest briefs, which is the worse failure.
+ * (connection error, or 404 / 410 / 451). Anti-bot AND transient-server
+ * responses (401 / 403 / 405 / 429 / 5xx) and redirects are KEPT -- the posting
+ * still exists, the ATS is just gating automated probes or briefly erroring. A
+ * permanent drop on a transient 5xx would advance the digest cursor past a
+ * still-alive job forever. Over-aggressive dropping is the worse failure.
  */
 import { DIGEST_VERIFY_CAP } from './constants'
 import type { DigestItem } from './types'
@@ -15,9 +16,15 @@ import type { DigestItem } from './types'
 /** Per-request timeout for a verify probe. */
 const PROBE_TIMEOUT_MS = 6000
 
-/** Statuses that mean the posting is genuinely gone. */
-function isDeadStatus(status: number): boolean {
-  return status === 404 || status === 410 || status === 451 || status >= 500
+/**
+ * Statuses that mean the posting is genuinely gone. 5xx are deliberately NOT
+ * here: an ATS 500/502/503 is almost always transient, and dropping on it would
+ * permanently exclude an alive job (the cursor advances past it). Keep 5xx like
+ * the 401/403/429 anti-bot codes; only 404 / 410 / 451 (and connection errors,
+ * handled by the caller) drop.
+ */
+export function isDeadStatus(status: number): boolean {
+  return status === 404 || status === 410 || status === 451
 }
 
 async function probe(url: string): Promise<boolean> {

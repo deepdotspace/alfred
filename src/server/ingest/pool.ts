@@ -26,6 +26,8 @@ const POOL_QUERY_LIMIT = 20_000
 const STALE_DAYS = 14
 /** Soft-expire a row whose posting is older than this many days. */
 const MAX_AGE_DAYS = 90
+/** Hard-delete an already-inactive row whose posting is older than this. */
+const PURGE_AGE_DAYS = 180
 
 /** Load the whole pool into lookup maps (one query). */
 export async function buildPoolMaps(records: OwnerRecords): Promise<PoolMaps> {
@@ -141,7 +143,30 @@ export function shouldExpire(job: JobData, nowMs: number): boolean {
   if (job.active === false) return false
   const lastSeen = job.last_seen_at ? Date.parse(job.last_seen_at) : NaN
   if (Number.isFinite(lastSeen) && nowMs - lastSeen > STALE_DAYS * 86_400_000) return true
+  // Age out by the effective posting date: source posted_date when present, else
+  // when we first ingested it. Some sources (Firecrawl, a few ATS list feeds)
+  // give NO posted_date; without the first_ingested_at fallback those rows could
+  // never trip the age branch and would linger until they simply stopped being
+  // re-seen -- the exact reason undated postings pile up months deep.
   const posted = job.posted_date ? Date.parse(job.posted_date) : NaN
-  if (Number.isFinite(posted) && nowMs - posted > MAX_AGE_DAYS * 86_400_000) return true
+  const ageBasis = Number.isFinite(posted)
+    ? posted
+    : job.first_ingested_at
+      ? Date.parse(job.first_ingested_at)
+      : NaN
+  if (Number.isFinite(ageBasis) && nowMs - ageBasis > MAX_AGE_DAYS * 86_400_000) return true
   return false
+}
+
+/**
+ * True when an ALREADY-INACTIVE row is old enough to hard-delete. Soft-expiry
+ * never re-touches inactive rows, so without a purge they accumulate forever and
+ * eventually push the pool past POOL_QUERY_LIMIT -- which blinds buildPoolMaps
+ * and reopens the dedupe gap. Only rows that are BOTH inactive AND posted more
+ * than PURGE_AGE_DAYS ago qualify: clearly dead, never a live posting.
+ */
+export function shouldPurge(job: JobData, nowMs: number): boolean {
+  if (job.active !== false) return false
+  const posted = job.posted_date ? Date.parse(job.posted_date) : NaN
+  return Number.isFinite(posted) && nowMs - posted > PURGE_AGE_DAYS * 86_400_000
 }

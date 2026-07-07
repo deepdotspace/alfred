@@ -193,7 +193,7 @@ export default function ProfilePage() {
             <StageMultiSelect
               options={STAGE_TYPE_OPTIONS}
               values={normalizeIntent(t.intent)}
-              onToggle={(v) => setTargeting({ intent: toggleIntent(t.intent, v) })}
+              onToggle={(v) => setTargeting({ intent: toggleIntent(normalizeIntent(t.intent), v) })}
               wrap
             />
           </SectionCard>

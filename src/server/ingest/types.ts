@@ -54,6 +54,8 @@ export interface IngestStats {
   merged: number
   /** Rows soft-expired this run. */
   expired: number
+  /** Rows hard-deleted this run (inactive + posted older than ~180d; backfill only). */
+  purged: number
   /** Raw count per source. */
   bySource: Record<string, number>
   /** How newly-tagged jobs were tagged. */
@@ -70,6 +72,7 @@ export function emptyStats(): IngestStats {
     created: 0,
     merged: 0,
     expired: 0,
+    purged: 0,
     bySource: {},
     byTagger: { keyword: 0, haiku: 0 },
     slugsSeeded: 0,

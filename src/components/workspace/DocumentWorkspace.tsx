@@ -57,6 +57,14 @@ export function DocumentWorkspace({ jobId, job, appStage, onApplied, onClose }: 
   }
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
 
+  // Surface a failed refine/regenerate -- otherwise the overlay just drops silently.
+  const refineFailed = t.state === 'error' || !!t.error
+  const failedRef = useRef(false)
+  useEffect(() => {
+    if (refineFailed && !failedRef.current) showToast('Something went wrong rewriting that. Try again.')
+    failedRef.current = refineFailed
+  }, [refineFailed])
+
   const docLabel = docTab === 'resume' ? 'Résumé' : 'Cover letter'
 
   async function handleDownload(format: 'pdf' | 'docx') {
@@ -190,9 +198,15 @@ export function DocumentWorkspace({ jobId, job, appStage, onApplied, onClose }: 
               {t.refining ? 'Rewriting...' : 'Regenerate'}
             </Button>
 
-            <TrustNote tone="soft">
-              I'll only rephrase and reorder what's true. I won't invent skills, numbers, or titles you don't have.
-            </TrustNote>
+            {t.verified ? (
+              <TrustNote tone="soft">
+                I'll only rephrase and reorder what's true. I won't invent skills, numbers, or titles you don't have.
+              </TrustNote>
+            ) : (
+              <TrustNote tone="amber">
+                I could not fully verify every line in this draft. Please review it before you send.
+              </TrustNote>
+            )}
 
             {!t.coverGated && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--alf-indigo)' }}>

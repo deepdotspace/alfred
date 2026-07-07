@@ -52,7 +52,7 @@ export default function Alfred({
 
   const mascot = (
     <div
-      className={halo ? undefined : className}
+      className={halo ? 'alf-anim' : `alf-anim${className ? ` ${className}` : ''}`}
       style={{ width: px, height: px, animation: wrapperAnim }}
       aria-hidden
     >
@@ -92,7 +92,7 @@ export default function Alfred({
   if (!halo) return mascot
 
   return (
-    <div className={className} style={{ position: 'relative', display: 'inline-flex' }}>
+    <div className={`alf-anim${className ? ` ${className}` : ''}`} style={{ position: 'relative', display: 'inline-flex' }}>
       <div
         aria-hidden
         style={{

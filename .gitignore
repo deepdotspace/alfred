@@ -26,3 +26,6 @@ CLAUDE.md
 brag-output/
 test-results/
 skills-lock.json
+
+# marketing binary — keep out of source history (use a GitHub Release asset)
+alfred-launch-promo.mp4

@@ -396,6 +396,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skel { animation: none; }
+  .alf-anim, .alf-anim * { animation: none !important; }
 }
 
 /* ── Landing (the day-cycle) -- hover + responsive collapse ──── */

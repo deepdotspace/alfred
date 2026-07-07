@@ -49,6 +49,13 @@ export interface VerifyReport {
   fabricated: number
   /** Only the flagged (embellished/fabricated) findings. */
   flagged: VerifyFinding[]
+  /**
+   * True when the verifier did NOT return a usable result -- a call/parse
+   * failure, or an absent/non-array/empty `findings` response that cannot be
+   * trusted as a clean pass -- even after one retry. The pipeline must fail
+   * closed on this: never stamp the document `clean`/`verified`.
+   */
+  verifierFailed?: boolean
 }
 
 /** One verify round captured for the proof (first pass dirty -> clean re-verify). */
