@@ -4,9 +4,11 @@
  * against DESIGN-SPEC. Not reachable in a production build.
  */
 import { useState, type ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import Alfred from '../components/Alfred'
 import { AppShell } from '../components/shell/AppShell'
+import { SearchingBrief } from '../components/brief/SearchingBrief'
+import type { SearchPhase, SearchState } from '../components/brief/search'
 import { useToast } from '../components/ui'
 import {
   Button, Chip, AddChip, StageSegmented, PillToggle, MetaPill, ResumeChip, DocSkillChip, RefineChip,
@@ -25,8 +27,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 const ROLE_OPTS = ['Product Design', 'Frontend Engineering', 'Backend Engineering', 'Data Analyst', 'UX Research', 'Product Management']
 
+/**
+ * Sample cursors for the brief's "reading the market" state, so each phase can be
+ * screenshot-verified without waiting on a real multi-minute run:
+ *   /dev-ui?searching=gathering | reading | writing
+ */
+const SEARCH_PREVIEW: Record<SearchPhase, SearchState> = {
+  gathering: { active: true, phase: 'gathering', progress: 0, total: 0, read: 0, kept: 0, failed: false },
+  reading: { active: true, phase: 'reading', progress: 0.375, total: 80, read: 30, kept: 3, failed: false },
+  writing: { active: true, phase: 'writing', progress: 1, total: 80, read: 80, kept: 6, failed: false },
+}
+
 export default function DevUI() {
+  const [params] = useSearchParams()
   if (!import.meta.env.DEV) return <Navigate to="/" replace />
+  const phase = params.get('searching') as SearchPhase | null
+  if (phase && SEARCH_PREVIEW[phase]) {
+    return <SearchingBrief firstName="Harsh" search={SEARCH_PREVIEW[phase]} />
+  }
   return <Showcase />
 }
 

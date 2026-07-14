@@ -384,6 +384,8 @@
 @keyframes sparkle { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes dawn { 0% { background: linear-gradient(160deg,#1B2147,#34306B); } 100% { background: linear-gradient(160deg,#E7ECF9,#EDE9FB); } }
 @keyframes scanmove { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+/* The live dot on the brief's "Alfred is reading the market" line. */
+@keyframes alfDotBlink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 
 /* ── Helpers ─────────────────────────────────────────────── */
 .mono { font-family: 'DM Mono', ui-monospace, SFMono-Regular, monospace; }
@@ -397,6 +399,12 @@
 @media (prefers-reduced-motion: reduce) {
   .skel { animation: none; }
   .alf-anim, .alf-anim * { animation: none !important; }
+}
+
+/* The searching radar is the ornament, the counters are the substance: drop the
+   radar first when the detail pane gets tight. */
+@media (max-width: 1080px) {
+  .radar-col { display: none; }
 }
 
 /* ── Landing (the day-cycle) -- hover + responsive collapse ──── */

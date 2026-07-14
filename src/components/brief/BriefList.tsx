@@ -16,6 +16,7 @@ import { useMemo, useState } from 'react'
 import { RoleCard, Button, PillToggle } from '../ui/alfred'
 import Alfred from '../Alfred'
 import type { BriefRow } from './data'
+import type { SearchState } from './search'
 import {
   avatarColors,
   cardMetaLine,
@@ -34,7 +35,10 @@ export interface BriefListProps {
   status: 'loading' | 'ready'
   hasProfile: boolean
   needsSponsor: boolean
-  recomputing: boolean
+  /** The live match run. See ./search. */
+  search: SearchState
+  /** A run has COMPLETED for this user at least once (profile.last_match_at). */
+  matchRan: boolean
   selectedJobId: string | null
   onSelect: (jobId: string) => void
   onRecompute: () => void
@@ -190,7 +194,8 @@ export function BriefList({
   status,
   hasProfile,
   needsSponsor,
-  recomputing,
+  search,
+  matchRan,
   selectedJobId,
   onSelect,
   onRecompute,
@@ -222,18 +227,39 @@ export function BriefList({
         body="Tell me what you're looking for and I'll start reading the market for you."
       />
     )
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && search.active) {
+    // A run is in flight. Never offer "Check again" here: it enqueues a SECOND
+    // billed run over the same postings, and it is exactly what a user staring
+    // at an empty list will click.
     body = (
       <CenteredState
-        working={recomputing}
-        title={recomputing ? 'Reading the market for you' : 'Your brief is warming up'}
+        working
+        title="Reading the market for you"
         body={
-          recomputing
-            ? "I'm reading through the postings now. Your roles will appear here shortly."
-            : "I haven't found roles worth your time just yet. I'll keep reading."
+          search.total > 0
+            ? `I've read ${search.read.toLocaleString()} of ${search.total.toLocaleString()} postings. Your roles will appear here as I find them.`
+            : "I'm gathering the postings in your space. Your roles will appear here as I find them."
         }
-        actionLabel={recomputing ? undefined : 'Check again'}
-        onAction={recomputing ? undefined : onRecompute}
+      />
+    )
+  } else if (rows.length === 0 && !matchRan) {
+    // No run in flight and none has ever finished: the first one is about to
+    // start. Warming, not empty.
+    body = (
+      <CenteredState
+        working
+        title="Your brief is warming up"
+        body="I'm about to read the market for you. Your roles will land here."
+      />
+    )
+  } else if (rows.length === 0) {
+    // A run COMPLETED and nothing qualified. Now "Check again" is honest.
+    body = (
+      <CenteredState
+        title="Nothing worth your time yet"
+        body="I read the market and none of it was a strong enough fit. I'll keep reading."
+        actionLabel="Check again"
+        onAction={onRecompute}
       />
     )
   } else if (shown.length === 0) {

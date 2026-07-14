@@ -16,6 +16,7 @@ import { cronInvoker } from './server/integrations'
 import { initialIngestState, ingestProgress, runIngestTick, type IngestCtx } from './server/ingest/run'
 import type { IngestPayload, IngestState, OwnerRecords } from './server/ingest/types'
 import { initMatchState, runMatchTick } from './server/match/run'
+import { encodeMatchProgress } from './server/match/types'
 import type { MatchCtx, MatchPayload, MatchState } from './server/match/types'
 import { runTailorJob, clearTailorMarker } from './server/tailor/run'
 import type { OwnerRecords as TailorRecords, TailorCtx, TailorPayload } from './server/tailor/types'
@@ -61,9 +62,11 @@ export async function runJob(job: Job, jobCtx: JobContext, env: Env): Promise<un
     if (jobCtx.signal.aborted) return state.stats
 
     const { state: next, done } = await runMatchTick(ctx, state)
+    // The brief renders its "reading the market" state from these counters, so
+    // they are the run's real cursor -- not a cosmetic estimate.
     jobCtx.progress(
       next.jobIds.length ? Math.min(1, next.cursor / next.jobIds.length) : 1,
-      `match ${next.cursor}/${next.jobIds.length}: kept ${next.stats.kept}, dropped ${next.stats.dropped}`,
+      encodeMatchProgress({ total: next.jobIds.length, read: next.cursor, kept: next.stats.kept }),
     )
     if (!done) {
       jobCtx.continue(next, { afterMs: 0 })

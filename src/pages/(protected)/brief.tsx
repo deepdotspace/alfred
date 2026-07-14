@@ -66,7 +66,8 @@ export default function BriefPage() {
             status={data.status}
             hasProfile={data.hasProfile}
             needsSponsor={data.needsSponsor}
-            recomputing={data.recomputing}
+            search={data.search}
+            matchRan={data.stats.matchRan}
             selectedJobId={selectedJobId}
             onSelect={handleSelect}
             onRecompute={() => void data.recompute('full')}
@@ -90,9 +91,10 @@ export default function BriefPage() {
               firstName={data.user?.firstName ?? 'there'}
               status={data.status}
               hasProfile={data.hasProfile}
-              recomputing={data.recomputing}
+              search={data.search}
               stats={data.stats}
               onAdjustTargeting={() => navigate('/profile')}
+              onRetrySearch={() => void data.recompute('full')}
             />
           )
         }

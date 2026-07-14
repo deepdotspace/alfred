@@ -28,6 +28,40 @@ export interface MatchPayload {
   mode: MatchMode
 }
 
+/**
+ * Live progress the match Job reports on every alarm tick.
+ *
+ * The Job's `progressMessage` is the SDK's only per-tick string channel, so the
+ * run's real counters are encoded into it and parsed back by the brief. Every
+ * number the "reading the market" state shows is therefore measured, never
+ * simulated: the brief must not invent a count it cannot stand behind.
+ */
+export interface MatchProgress {
+  /** Hard-filter survivors this run will score. */
+  total: number
+  /** Postings scored so far. */
+  read: number
+  /** Verdicts kept for the feed so far (qualify yes|stretch). */
+  kept: number
+}
+
+export function encodeMatchProgress(p: MatchProgress): string {
+  return JSON.stringify(p)
+}
+
+/** Parse a Job progressMessage back into counters. Null when absent or malformed. */
+export function parseMatchProgress(message: string | undefined | null): MatchProgress | null {
+  if (!message) return null
+  try {
+    const p = JSON.parse(message) as Partial<MatchProgress>
+    if (typeof p.total !== 'number' || typeof p.read !== 'number' || typeof p.kept !== 'number') return null
+    if (!Number.isFinite(p.total) || !Number.isFinite(p.read) || !Number.isFinite(p.kept)) return null
+    return { total: p.total, read: p.read, kept: p.kept }
+  } catch {
+    return null
+  }
+}
+
 /** Run counters reported as the Job result. */
 export interface MatchStats {
   /** Active pool jobs considered. */

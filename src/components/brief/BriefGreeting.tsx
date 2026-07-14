@@ -10,15 +10,18 @@
  */
 import Alfred from '../Alfred'
 import { Button } from '../ui/alfred'
+import { SearchingBrief } from './SearchingBrief'
+import type { SearchState } from './search'
 import { greeting, type BriefStats } from './helpers'
 
 export interface BriefGreetingProps {
   firstName: string
   status: 'loading' | 'ready'
   hasProfile: boolean
-  recomputing: boolean
+  search: SearchState
   stats: BriefStats
   onAdjustTargeting: () => void
+  onRetrySearch: () => void
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -69,17 +72,22 @@ const HEADLINE: React.CSSProperties = {
 
 const HELPER: React.CSSProperties = { fontSize: 14, color: 'var(--alf-helper)', maxWidth: 360, lineHeight: 1.55 }
 
-export function BriefGreeting({ firstName, status, hasProfile, recomputing, stats, onAdjustTargeting }: BriefGreetingProps) {
-  const { scanVolume, consideredTotal, readLatestCycle, worth, strong, isFirstBrief, matchRan } = stats
+export function BriefGreeting({
+  firstName,
+  status,
+  hasProfile,
+  search,
+  stats,
+  onAdjustTargeting,
+  onRetrySearch,
+}: BriefGreetingProps) {
+  const { scanVolume, readLatestCycle, worth, strong, isFirstBrief, matchRan } = stats
 
-  // Warming = "never ran yet": data still loading, or a first read is genuinely
-  // in flight (no run has completed). Once a run has COMPLETED (matchRan) -- even
-  // with zero survivors -- we leave warming for the honest empty state below.
-  const warming = status === 'loading' || !hasProfile || (consideredTotal === 0 && !matchRan)
-  // Genuine empty: a run completed but nothing qualified for this user.
-  const empty = !warming && worth === 0
-
-  if (warming) {
+  // The order below is the fix. This used to infer "a run finished" from "at
+  // least one verdict row exists" -- but the matcher writes rejections as it
+  // goes, so the first batch of `no` verdicts made the app announce a finished,
+  // empty search while it was still reading. The run's own status now decides.
+  if (status === 'loading' || !hasProfile) {
     return (
       <div style={SHELL}>
         <div style={{ marginBottom: 28 }}>
@@ -94,7 +102,48 @@ export function BriefGreeting({ firstName, status, hasProfile, recomputing, stat
     )
   }
 
-  if (empty) {
+  // A run is in flight right now: show what it is actually doing.
+  if (search.active) {
+    return <SearchingBrief firstName={firstName} search={search} />
+  }
+
+  if (search.failed) {
+    return (
+      <div style={SHELL}>
+        <div style={{ marginBottom: 28 }}>
+          <Alfred size="lg" halo haloInset={-20} haloDuration={3} />
+        </div>
+        <div className="mono" style={EYEBROW}>{greeting()}, {firstName}</div>
+        <h1 style={HEADLINE}>I couldn&rsquo;t finish reading the market.</h1>
+        <div style={HELPER}>
+          Something went wrong on my end, not yours. Let me try that again.
+        </div>
+        <Button variant="soft" tone="tint2" onClick={onRetrySearch} style={{ marginTop: 18 }}>
+          Read the market again
+        </Button>
+      </div>
+    )
+  }
+
+  // No run in flight and none has ever completed: the first one is about to be
+  // kicked. Hold the warming state rather than flashing a false empty result.
+  if (!matchRan) {
+    return (
+      <div style={SHELL}>
+        <div style={{ marginBottom: 28 }}>
+          <Alfred size="lg" mood="working" halo haloInset={-20} haloDuration={3} />
+        </div>
+        <div className="mono" style={EYEBROW}>{greeting()}, {firstName}</div>
+        <h1 style={HEADLINE}>I&rsquo;m reading the market for you.</h1>
+        <div style={HELPER}>
+          Your first brief is on its way. I&rsquo;ll have a short, honest list of the roles worth your time in just a moment.
+        </div>
+      </div>
+    )
+  }
+
+  // Genuine empty: a run COMPLETED and nothing qualified.
+  if (worth === 0) {
     return (
       <div style={SHELL}>
         <div style={{ marginBottom: 28 }}>

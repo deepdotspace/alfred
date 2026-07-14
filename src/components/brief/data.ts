@@ -8,12 +8,21 @@
  * realtime (useQuery), so the brief updates live as the match Job writes rows.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useUser, useQuery, useMutations, getAuthToken, type RecordData } from 'deepspace'
+import { useUser, useQuery, useMutations, useJobs, getAuthToken, type RecordData } from 'deepspace'
 import type { ApplicationData, ApplicationStage, JobData, MatchData, ProfileData } from '../../types'
-import type { MatchMode } from '../../server/match/types'
+import type { MatchMode, MatchPayload } from '../../server/match/types'
+import { SCOPE_ID } from '../../constants'
+import { deriveSearchState, findLiveMatchJob, type SearchState } from './search'
 import { assembleBriefRows, computeBriefStats, needsSponsorship, type BriefRow, type BriefStats } from './helpers'
 
 const QUERY_LIMIT = 5000
+
+/**
+ * How long to hold the "searching" state after enqueueing, while waiting for the
+ * JobRoom to report the new job. Bounded, so a dropped enqueue can never pin the
+ * brief in a search that isn't happening.
+ */
+const KICK_GRACE_MS = 10_000
 
 export type { BriefRow }
 
@@ -31,7 +40,8 @@ export interface BriefData {
   rows: BriefRow[]
   stats: BriefStats
   needsSponsor: boolean
-  recomputing: boolean
+  /** The live match run, read from the Job itself. See ./search. */
+  search: SearchState
   recompute: (mode?: MatchMode) => Promise<void>
   markSeen: (jobId: string) => void
   saveRole: (jobId: string) => Promise<void>
@@ -40,13 +50,21 @@ export interface BriefData {
   appStage: (jobId: string) => ApplicationStage | null
 }
 
-async function callAction(name: string, body: Record<string, unknown>): Promise<void> {
+async function callAction<T = unknown>(
+  name: string,
+  body: Record<string, unknown>,
+): Promise<{ success: boolean; data?: T; error?: string }> {
   const token = await getAuthToken()
-  await fetch(`/api/actions/${name}`, {
+  const res = await fetch(`/api/actions/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(body),
   })
+  return (await res.json().catch(() => ({ success: false, error: 'bad response' }))) as {
+    success: boolean
+    data?: T
+    error?: string
+  }
 }
 
 export function useBriefData(): BriefData {
@@ -56,8 +74,11 @@ export function useBriefData(): BriefData {
   const appQ = useQuery<ApplicationData>('application', { limit: QUERY_LIMIT })
   const profileQ = useQuery<ProfileData>('profile', { limit: 5 })
   const appMut = useMutations<ApplicationData>('application')
+  // The match run is a background Job; watch it rather than guessing at it.
+  const { jobs: roomJobs, getJob, connected: jobsConnected } = useJobs<MatchPayload>(SCOPE_ID)
 
-  const [recomputing, setRecomputing] = useState(false)
+  const [taskId, setTaskId] = useState<string | null>(null)
+  const [kicking, setKicking] = useState(false)
   const kickedRef = useRef(false)
 
   const profile = profileQ.records[0]?.data ?? null
@@ -111,21 +132,57 @@ export function useBriefData(): BriefData {
       }
     : null
 
+  // The user's live match run. Recovered from the JobRoom, not from local state,
+  // so a reload mid-run rejoins the SAME run: without this the brief would see
+  // no matches, conclude nothing had started, and enqueue a second (owner-billed)
+  // run over the same 80 postings.
+  const liveJob = useMemo(() => findLiveMatchJob(roomJobs, user?.id ?? null), [roomJobs, user?.id])
+  const startedJob = taskId ? getJob(taskId) : undefined
+  const activeJob = liveJob ?? startedJob
+  const searchFailed = startedJob?.status === 'failed' || startedJob?.status === 'canceled'
+
+  const search = useMemo(
+    () => deriveSearchState({ job: activeJob, kicking, failed: searchFailed }),
+    [activeJob, kicking, searchFailed],
+  )
+
+  // Hold "searching" from the POST until the room reports the job, so the brief
+  // never blinks back to an empty state in the gap. Bounded by KICK_GRACE_MS.
+  useEffect(() => {
+    if (!kicking) return
+    if (activeJob) {
+      setKicking(false)
+      return
+    }
+    const t = setTimeout(() => setKicking(false), KICK_GRACE_MS)
+    return () => clearTimeout(t)
+  }, [kicking, activeJob])
+
   const recompute = useCallback(async (mode: MatchMode = 'full') => {
-    setRecomputing(true)
+    setKicking(true)
     try {
-      await callAction('match-recompute', { mode })
-    } finally {
-      // Leave a brief "reading" window; live match writes will refill the feed.
-      setTimeout(() => setRecomputing(false), 1500)
+      const res = await callAction<{ jobId?: string }>('match-recompute', { mode })
+      // Keep the jobId. The whole point: this is how the brief knows the search
+      // is still running, instead of assuming it finished after a fixed delay.
+      if (res.data?.jobId) setTaskId(res.data.jobId)
+      else setKicking(false)
+    } catch {
+      setKicking(false)
     }
   }, [])
 
-  // Pool-warming kick: once the profile is ready and there are zero matches,
-  // ask Alfred to read the market a single time. Live writes refill the feed.
+  // First-run kick: once the profile is ready and there are zero matches, ask
+  // Alfred to read the market a single time. Live writes refill the feed.
   useEffect(() => {
     if (kickedRef.current) return
     if (status !== 'ready' || !hasProfile) return
+    // Wait for the JobRoom snapshot before concluding nothing is running -- on a
+    // reload mid-run the running job arrives with it.
+    if (!jobsConnected) return
+    if (activeJob) {
+      kickedRef.current = true
+      return
+    }
     if (matchQ.records.length > 0) return
     // A completed run that found zero survivors leaves zero match rows but sets
     // profile.last_match_at. Don't re-kick a full recompute on every mount in
@@ -134,7 +191,7 @@ export function useBriefData(): BriefData {
     if (profile?.last_match_at) return
     kickedRef.current = true
     void recompute('full')
-  }, [status, hasProfile, matchQ.records.length, profile, recompute])
+  }, [status, hasProfile, jobsConnected, activeJob, matchQ.records.length, profile, recompute])
 
   const markSeen = useCallback((jobId: string) => {
     void callAction('match-mark-seen', { jobId })
@@ -203,7 +260,7 @@ export function useBriefData(): BriefData {
     rows,
     stats,
     needsSponsor,
-    recomputing,
+    search,
     recompute,
     markSeen,
     saveRole,
