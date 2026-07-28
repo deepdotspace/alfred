@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    The Alfred mascot, reduced to what survives at 16px: the squircle head in the
+    body gradient, the eyes, the smile, and the green bowtie. The ground shadow
+    and sparkle from src/components/Alfred.tsx are dropped because they land under
+    a pixel at tab size. Colors are the literal --alf-* tokens from src/styles.css.
+  -->
+  <defs>
+    <linearGradient id="alfhead" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7E93FF"/>
+      <stop offset="1" stop-color="#4E9FE0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="28" height="28" rx="11.9" fill="url(#alfhead)"/>
+  <ellipse cx="9" cy="7.6" rx="4.55" ry="3.15" fill="#fff" opacity="0.22"/>
+
+  <circle cx="11.1" cy="14.2" r="2.8" fill="#fff"/>
+  <circle cx="20.9" cy="14.2" r="2.8" fill="#fff"/>
+  <circle cx="11.6" cy="14.7" r="1.4" fill="#23306B"/>
+  <circle cx="21.4" cy="14.7" r="1.4" fill="#23306B"/>
+  <circle cx="12.15" cy="14.2" r="0.5" fill="#fff"/>
+  <circle cx="21.95" cy="14.2" r="0.5" fill="#fff"/>
+
+  <path d="M12.5 19.5 Q16 22.3 19.5 19.5" stroke="#23306B" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+
+  <!--
+    The mascot's bowtie is a single pentagon, which collapses into a green blob
+    below ~64px. Redrawn here as two triangles around a knot: the silhouette that
+    still reads as a bowtie at 16px. Same two green tokens.
+  -->
+  <path d="M11.4 23.9 L15.1 26.1 L11.4 28.3 Z" fill="#34B89C"/>
+  <path d="M20.6 23.9 L16.9 26.1 L20.6 28.3 Z" fill="#34B89C"/>
+  <circle cx="16" cy="26.1" r="1.35" fill="#27977E"/>
+</svg>
