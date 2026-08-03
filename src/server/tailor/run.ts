@@ -177,6 +177,7 @@ interface R2Env {
   PLATFORM_WORKER_URL?: string
   APP_IDENTITY_TOKEN?: string
   APP_NAME: string
+  DEEPSPACE_APP_ID: string
 }
 
 /**
@@ -195,7 +196,7 @@ async function storeR2(env: R2Env, userId: string, key: string, base64: string, 
         headers: {
           'content-type': 'application/json',
           'x-app-identity-token': env.APP_IDENTITY_TOKEN,
-          'x-app-name': env.APP_NAME,
+          'x-app-id': env.DEEPSPACE_APP_ID,
           'x-user-id': userId,
         },
         body: JSON.stringify({ data: base64, name: key, mimeType }),

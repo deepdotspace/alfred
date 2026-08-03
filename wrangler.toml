@@ -35,7 +35,7 @@ bindings = [
 #   docs/proposals/binding-auto-provisioning.md
 
 [vars]
-DEEPSPACE_APP_ID = "alfred"
+DEEPSPACE_APP_ID = "app_01KZ4FNR99YFNXBPEYW33X2WCH"
 APP_NAME = "alfred"
 
 [dev]
