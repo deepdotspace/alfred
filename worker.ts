@@ -16,7 +16,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { verifyJwt, apiWorkerFetch, platformWorkerFetch, authWorkerFetch } from 'deepspace/worker'
-import { authenticatedRoomRequest, resolveAppRole } from 'deepspace/worker'
+import { authenticatedRoomRequest, resolveAppRole as sdkResolveAppRole } from 'deepspace/worker'
 import { buildCronContext, enqueueJob } from 'deepspace/worker'
 import type { JwtVerifierConfig, VerifyResult } from 'deepspace/worker'
 import { RecordRoom, YjsRoom, CanvasRoom, PresenceRoom, CronRoom, JobRoom } from 'deepspace/worker'
@@ -90,7 +90,7 @@ export class AppJobRoom extends JobRoom<Env> {
     super(state, env, {
       authorizeWrite: async (user) => {
         if (user.userId.startsWith('anon-')) return false
-        const role = await appRole(env, user.userId)
+        const role = await resolveAppRole(env, user.userId)
         return role === 'member' || role === 'admin'
       },
     })
@@ -220,8 +220,8 @@ async function resolveAuth(req: Request, env: Env): Promise<VerifyResult | null>
  * would read an empty room and grade every non-owner user `viewer`. Pass the
  * room key this app actually uses.
  */
-function appRole(env: Env, userId: string) {
-  return resolveAppRole(
+function resolveAppRole(env: Env, userId: string) {
+  return sdkResolveAppRole(
     {
       RECORD_ROOMS: env.RECORD_ROOMS,
       DEEPSPACE_APP_ID: env.APP_NAME,
@@ -697,7 +697,7 @@ app.get(
   '/ws/canvas/:docId',
   wsRoute(
     (env) => env.CANVAS_ROOMS,
-    async (auth, env) => ({ role: await appRole(env, auth.userId) }),
+    async (auth, env) => ({ role: await resolveAppRole(env, auth.userId) }),
   ),
 )
 
@@ -713,7 +713,7 @@ app.get(
 // trigger / pause / resume tasks; every other connection (signed-in or
 // anonymous) is a read-only viewer, which CronRoom enforces.
 //
-// The role here is deliberately NOT `appRole()`. This app grants every
+// The role here is deliberately NOT `resolveAppRole()`. This app grants every
 // signed-in user `member`, and CronRoom treats `member` as write-capable — so
 // resolving the app role here would hand every account trigger/pause/resume
 // over jobs billed to the owner. The comparison against OWNER_USER_ID is the
