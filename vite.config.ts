@@ -1,7 +1,9 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import generouted from '@generouted/react-router/plugin'
 import { cloudflare } from '@cloudflare/vite-plugin'
+import { deepspaceBuild } from 'deepspace/build'
 import checker from 'vite-plugin-checker'
 
 export default defineConfig({
@@ -9,6 +11,10 @@ export default defineConfig({
     react(),
     generouted(),
     cloudflare(),
+    // SDK-owned build wiring: stamps the app id this build targets into the
+    // browser bundle, supplies the client `dedupe` list, and deletes the
+    // preview `.dev.vars` the Cloudflare plugin drops beside the built worker.
+    deepspaceBuild({ appDir: fileURLToPath(new URL('.', import.meta.url)) }),
     // Runs the Rules of Hooks lint (see eslint.config.js) automatically, so
     // there's no separate step to remember: a violation surfaces as an overlay
     // during `deepspace dev` and fails the build during `deepspace deploy`.
@@ -21,9 +27,6 @@ export default defineConfig({
       },
     }),
   ],
-  resolve: {
-    dedupe: ['react', 'react-dom', 'better-auth'],
-  },
   optimizeDeps: {
     // generouted loads routes via `import.meta.glob`, which Vite's esbuild dep-scanner
     // does not evaluate — so every dep reachable only through the page tree (UI libs,
