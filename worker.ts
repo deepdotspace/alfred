@@ -167,35 +167,6 @@ const app = new Hono<AppContext>()
 app.use('/api/*', cors())
 
 // ---------------------------------------------------------------------------
-// Cron warmer (LOAD-BEARING)
-//
-// The AppCronRoom DO never auto-arms: nothing addresses it in normal use, so its
-// alarm is never scheduled and tasks never fire (lastRunAt stays null -> the job
-// pool stays empty in prod with everything else green). Poke it once per isolate
-// to arm the alarm; CronRoom.fetch() -> ensureInitialized() -> scheduleNextAlarm()
-// sets it, and it self-perpetuates from then on (and survives redeploy).
-// See references/cron.md + references/sdk-footguns.md.
-// ---------------------------------------------------------------------------
-
-let cronArmed = false
-app.use('*', async (c, next) => {
-  if (!cronArmed) {
-    cronArmed = true
-    const env = c.env
-    c.executionCtx.waitUntil(
-      env.CRON_ROOMS.get(env.CRON_ROOMS.idFromName(`app:${env.APP_NAME}`))
-        .fetch('https://cron-warmup/')
-        .then(() => undefined)
-        .catch((err) => {
-          cronArmed = false
-          console.error('[cron-warmup] failed to arm cron DO:', err)
-        }),
-    )
-  }
-  return next()
-})
-
-// ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
 

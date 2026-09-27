@@ -17,7 +17,18 @@ import { loadMeta } from './server/ingest/meta'
 import { runDigestCron } from './server/digest/run'
 import type { ProfileData } from './types'
 
-export const tasks: CronTask[] = [
+/**
+ * Automatic work is disabled while Alfred has no active users. Keeping this
+ * as an explicit, tested switch makes re-enabling the scheduler a deliberate
+ * product decision instead of an incidental deploy side effect.
+ *
+ * `tasks` must be empty, rather than merely declaring each task with
+ * `paused: true`: CronRoom preserves the persisted pause state for existing
+ * task rows, so `paused: true` only affects a newly-created room.
+ */
+export const AUTOMATIC_TASKS_ENABLED = false
+
+const configuredTasks: CronTask[] = [
   // Every 30 min: SimplifyJobs + SpeedyApply (free) + the first-run/once-a-day
   // firecrawl+exa (guarded inside the Job). Skips the heavy ATS sweep.
   { name: 'ingest-delta', intervalMinutes: 30 },
@@ -34,6 +45,8 @@ export const tasks: CronTask[] = [
   // the digest_state cursor; this single 07:00 ET task covers both cadences.
   { name: 'digest', schedule: '0 7 * * *', timezone: 'America/New_York' },
 ]
+
+export const tasks: CronTask[] = AUTOMATIC_TASKS_ENABLED ? configuredTasks : []
 
 async function enqueueIngest(env: Env, payload: IngestPayload): Promise<void> {
   await enqueueJob(env.JOB_ROOMS, `app:${env.APP_NAME}`, 'ingest-pool', payload, {
